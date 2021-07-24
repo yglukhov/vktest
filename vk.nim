@@ -293,9 +293,9 @@ proc rateDeviceSuitability(e: Engine, device: VkPhysicalDevice): int =
 
   var deviceProperties: VkPhysicalDeviceProperties
   var deviceFeatures: VkPhysicalDeviceFeatures
-  echo "device: ", cast[cstring](addr deviceProperties.deviceName)
   vkGetPhysicalDeviceProperties(device, addr deviceProperties)
   vkGetPhysicalDeviceFeatures(device, addr deviceFeatures)
+  echo "device: ", cast[cstring](addr deviceProperties.deviceName)
 
 
   if not (e.findQueueFamilies(device).isComplete and e.checkDeviceExtensionSupport(device) and e.checkSwapChainSupport(device)):
@@ -412,7 +412,7 @@ proc createSwapChain(e: var Engine) =
   var queueFamilyIndices = [indices.graphicsFamily, indices.presentFamily]
   if indices.graphicsFamily != indices.presentFamily:
     createInfo.imageSharingMode = VkSharingMode.concurrent
-    createInfo.queueFamilyIndexCount = 2
+    createInfo.queueFamilyIndexCount = queueFamilyIndices.len.uint32
     createInfo.pQueueFamilyIndices = cast[ptr uint32](addr queueFamilyIndices[0])
   else:
     createInfo.imageSharingMode = VkSharingMode.exclusive
@@ -607,7 +607,7 @@ proc createGraphicsPipeline(e: var Engine) =
 
   var dynamicState: VkPipelineDynamicStateCreateInfo
   dynamicState.sType = pipelineDynamicStateCreateInfo
-  dynamicState.dynamicStateCount = 2
+  dynamicState.dynamicStateCount = dynamicStates.len.uint32
   dynamicState.pDynamicStates = addr dynamicStates[0]
 
 
@@ -623,7 +623,7 @@ proc createGraphicsPipeline(e: var Engine) =
 
   var pipelineInfo: VkGraphicsPipelineCreateInfo
   pipelineInfo.sType = graphicsPipelineCreateInfo
-  pipelineInfo.stageCount = 2
+  pipelineInfo.stageCount = shaderStages.len.uint32
   pipelineInfo.pStages = addr shaderStages[0]
 
   pipelineInfo.pVertexInputState = addr vertexInputInfo
