@@ -5,7 +5,13 @@ import system/ansi_c
 import nimgl/glfw, nimgl/glfw/native
 import vulkan
 
-{.passl: "-lvulkan".}
+when defined(windows):
+  from winlean import Handle
+  from os import getEnv
+  {.passl: "-L" & getEnv("USERPROFILE") & "\\scoop\\apps\\vulkan\\current\\Lib".}
+  {.passl: "-lvulkan-1".}
+else:
+  {.passl: "-lvulkan".}
 
 type
   Engine = object
@@ -162,7 +168,10 @@ proc getRequiredExtensions(): seq[cstring] =
   result = newSeqOfCap[cstring](glfwExtensionCount + 1)
   for i in 0 ..< glfwExtensionCount: result.add(glfwExtensions[i])
 
-  result.add(vkKhrXlibSurfaceExtensionName)
+  when defined(windows):
+    result.add(vkKhrWin32SurfaceExtensionName)
+  else:
+    result.add(vkKhrXlibSurfaceExtensionName)
 
   when enableValidationLayers:
     result.add("VK_EXT_debug_utils")
@@ -361,12 +370,21 @@ proc createLogicalDevice(e: var Engine) =
   vkGetDeviceQueue(e.device, indices.presentFamily.uint32, 0, addr e.presentQueue)
 
 proc createSurface(e: var Engine) =
-  var createInfo: VkXlibSurfaceCreateInfoKHR
-  createInfo.sType = xlibSurfaceCreateInfoKHR
-  createInfo.dpy = glfwGetX11Display()
-  createInfo.window = getX11Window(window)
+  when defined(windows):
+    var createInfo: VkWin32SurfaceCreateInfoKHR
+    createInfo.sType = win32SurfaceCreateInfoKHR
+    createInfo.hwnd = cast[Handle](getWin32Window(window))
+    createInfo.hinstance = 0 #GetModuleHandle(nil)
 
-  let ret = vkCreateXlibSurfaceKHR(e.instance, addr createInfo, nil, addr e.surface)
+    let ret = vkCreateWin32SurfaceKHR(e.instance, addr createInfo, nil, addr e.surface)
+  else:
+    var createInfo: VkXlibSurfaceCreateInfoKHR
+    createInfo.sType = xlibSurfaceCreateInfoKHR
+    createInfo.dpy = glfwGetX11Display()
+    createInfo.window = getX11Window(window)
+
+    let ret = vkCreateXlibSurfaceKHR(e.instance, addr createInfo, nil, addr e.surface)
+
   if ret != success:
     raise newException(ValueError, "failed to create window surface: " & $ret)
 
