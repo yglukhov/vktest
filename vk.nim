@@ -10,6 +10,9 @@ when defined(windows):
   from os import getEnv
   {.passl: "-L" & getEnv("USERPROFILE") & "\\scoop\\apps\\vulkan\\current\\Lib".}
   {.passl: "-lvulkan-1".}
+elif defined(macosx) and not defined(ios):
+  from nimgl/vulkan as glvk import nil
+  {.passL: "-lMoltenVK".}
 else:
   {.passl: "-lvulkan".}
 
@@ -170,6 +173,8 @@ proc getRequiredExtensions(): seq[cstring] =
 
   when defined(windows):
     result.add(vkKhrWin32SurfaceExtensionName)
+  elif defined(macosx) and not defined(ios):
+    result.add(vkMvkMacosSurfaceExtensionName)
   else:
     result.add(vkKhrXlibSurfaceExtensionName)
 
@@ -377,6 +382,12 @@ proc createSurface(e: var Engine) =
     createInfo.hinstance = 0 #GetModuleHandle(nil)
 
     let ret = vkCreateWin32SurfaceKHR(e.instance, addr createInfo, nil, addr e.surface)
+  elif defined(macosx) and not defined(ios):
+    let ret = cast[VkResult](glfwCreateWindowSurface(cast[glvk.VkInstance](e.instance), window, nil, cast[ptr glvk.VkSurfaceKHR](addr e.surface)))
+    # var createInfo: VkMacOSSurfaceCreateInfoMVK
+    # createInfo.sType = macosSurfaceCreateInfoMvk
+
+    # let ret = vkCreateMacOSSurfaceMVK(e.instance, addr createInfo, nil, addr e.surface)
   else:
     var createInfo: VkXlibSurfaceCreateInfoKHR
     createInfo.sType = xlibSurfaceCreateInfoKHR
